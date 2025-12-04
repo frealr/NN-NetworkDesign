@@ -44,6 +44,7 @@ We compare four different approaches:
     *   **Optimization**: The network weights are trained to minimize the Augmented Lagrangian.
     *   **Multiplier Update**: Uses the same explicit update rule for $\lambda$ as the Direct method:
         $$ \lambda_{k+1} = \max(0, \lambda_k + \rho \cdot (-x_k)) $$
+    *   **Important Note**: The **Neural Network does NOT learn the Lagrange multipliers**. It only learns to predict the primal variables. The multipliers are tracked as external state variables and updated explicitly via the rule above, just like in the Direct method.
     *   **Key Difference**: While the Direct method optimizes a specific instance's values, this approach learns a function (the neural network) to generate the solution. This architecture allows for **amortized optimization**, where the network could be conditioned on problem parameters (like $t$ or $u$) to solve a family of problems without retraining.
 
 ## Installation
