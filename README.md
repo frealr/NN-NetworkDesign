@@ -28,12 +28,23 @@ We compare four different approaches:
 ### 3. Primal-Dual Direct
 *   **File**: `solve_primal_dual.py`
 *   **Description**: A direct numerical optimization method using the **Augmented Lagrangian** method.
-*   **Mechanism**: Optimizes the primal variables directly using PyTorch's Adam optimizer, handling inequality constraints via dual variables and penalty terms. Equality constraints are satisfied by construction.
+*   **Mechanism**:
+    *   **Primal Variable**: Optimizes a static tensor `w` directly.
+    *   **Equality Constraints**: Satisfied by construction using the null-space method ($x = Rw + u_{part}$).
+    *   **Inequality Constraints**: Handled via the Augmented Lagrangian method.
+    *   **Multiplier Update**: The Lagrange multipliers $\lambda$ are updated using the dual ascent step:
+        $$ \lambda_{k+1} = \max(0, \lambda_k + \rho \cdot (-x_k)) $$
+        where $\rho$ is the penalty parameter which is also increased iteratively.
 
 ### 4. Primal-Dual NN Loop
 *   **File**: `solve_nn_primal_dual.py`
 *   **Description**: Similar to the Primal-Dual Direct method but parameterizes the solution using a **Neural Network**.
-*   **Mechanism**: Useful for amortized optimization, where the network learns to predict the optimal solution. It uses the Augmented Lagrangian method for inequality constraints.
+*   **Mechanism**:
+    *   **Primal Variable**: The output of a Neural Network (`PrimalModel`) which predicts $x$ (or $w$).
+    *   **Optimization**: The network weights are trained to minimize the Augmented Lagrangian.
+    *   **Multiplier Update**: Uses the same explicit update rule for $\lambda$ as the Direct method:
+        $$ \lambda_{k+1} = \max(0, \lambda_k + \rho \cdot (-x_k)) $$
+    *   **Key Difference**: While the Direct method optimizes a specific instance's values, this approach learns a function (the neural network) to generate the solution. This architecture allows for **amortized optimization**, where the network could be conditioned on problem parameters (like $t$ or $u$) to solve a family of problems without retraining.
 
 ## Installation
 
