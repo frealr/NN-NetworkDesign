@@ -2,3 +2,6 @@ torch
 numpy
 scipy
 cvxpy
+matplotlib
+seaborn
+pandas

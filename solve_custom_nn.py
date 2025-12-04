@@ -5,104 +5,22 @@ import cvxpy as cp
 from utils import get_equality_solution_and_null_basis, find_interior_point
 from model import ConstrainedOptNet
 
-def solve_custom_nn():
-    # --- 1. Problem Data Setup (from user's code) ---
-    n = 3
-    a = 6
+from problem_data import create_problem_data
 
-    entr_coefs = np.concatenate([np.ones(2 * n**2), np.zeros(a * n**2)])
+def solve_custom_nn(data=None):
+    if data is None:
+        # Default data if none provided
+        t = np.array([1, 2, 1, 1.5, 2, 1.5])
+        u = np.array([100, 0.9, 1.1, 1.3,100, 1.4, 1, 1.2,100])
+        data = create_problem_data(t, u)
 
-    t_vec = np.array([1, 2, 1, 1.5, 2, 1.5])
-    c_vec = np.concatenate([np.zeros(2 * n**2), np.tile(t_vec, n**2)])
-
-    u_vec = np.array([100, 2, 4, 2,100, 2, 4, 2,100])
-    uext = np.concatenate([np.zeros(n**2), u_vec, np.zeros(a * n**2)])
-
-    # --- Zero out coefficients for o=d ---
-    for o in range(n):
-        d = o
-        # Block 1: f(o,d)
-        idx1 = n*o + d
-        entr_coefs[idx1] = 0
-        c_vec[idx1] = 0
-        uext[idx1] = 0
-        
-        # Block 2: fext(o,d)
-        idx2 = n**2 + n*o + d
-        entr_coefs[idx2] = 0
-        c_vec[idx2] = 0
-        uext[idx2] = 0
-        
-        # Block 3: f(i,j,o,d)
-        start_idx3 = 2*n**2 + (n*o + d)*a
-        for k in range(a):
-            idx3 = start_idx3 + k
-            entr_coefs[idx3] = 0
-            c_vec[idx3] = 0
-            uext[idx3] = 0
-
-    Ain = np.array([
-        [0, 0, 1, 0, 1, 0],
-        [1, 0, 0, 0, 0, 1],
-        [0, 1, 0, 1, 0, 0]
-    ])
-
-    Aout = np.array([
-        [1, 1, 0, 0, 0, 0],
-        [0, 0, 1, 1, 0, 0],
-        [0, 0, 0, 0, 1, 1]
-    ])
-
-    A_list = []
-    total_length = 2*n**2 + n**2*a
-
-    for o in range(n):
-      for d in range(n):
-        cons = np.zeros(2*n**2 + n**2*a)
-        cons[n*o+d] = 1
-        cons[n**2 + n*o+d] = 1
-        A_list.append(cons)
-    A_aux = np.array(A_list)
-    n_rows_A_c1 = A_aux.shape[0]
-    b_vec = np.ones((n_rows_A_c1, 1))
-
-    for o in range(n):          # o = 0..n-1
-        for d in range(n):      # d = 0..n-1
-            if o != d:
-                for i in range(n):   # i = 0..n-1
-                    current_length = 2*n**2 + a*n*o + d*a
-                    cons = np.concatenate([
-                        np.zeros(2*n**2),
-                        np.zeros(n*a*(o) + a*d),
-                        Aout[i] - Ain[i],
-                        np.zeros(total_length - current_length - a)
-                    ])
-                    # Ajustes en función de i
-                    if i == o:
-                        cons[n*o + d] = -1
-                    if i == d:
-                        cons[n*o + d] = 1
-                    A_list.append(cons)
-
-    # --- New Constraints: f(o,d) = 0 and f(i,j,o,d) = 0 if o == d ---
-    for o in range(n):
-        # 1. f(o,o) = 0 (Block 1)
-        cons = np.zeros(total_length)
-        cons[n*o + o] = 1
-        A_list.append(cons)
-        
-        # 2. f(i,j,o,o) = 0 (Block 3)
-        start_idx = 2*n**2 + a*(n*o + o)
-        for k in range(a):
-            cons = np.zeros(total_length)
-            cons[start_idx + k] = 1
-            A_list.append(cons)
-
-    A = np.array(A_list)
-    n_rows_A = A.shape[0]
-    b_vec = b_vec.flatten()
-    b_vec = np.concatenate([b_vec, np.zeros(n_rows_A - n_rows_A_c1)])
-    b_vec = b_vec.flatten()
+    n = data['n']
+    a = data['a']
+    entr_coefs = data['entr_coefs']
+    c_vec = data['c']
+    uext = data['uext']
+    A = data['A']
+    b_vec = data['b']
 
     # Convert to Tensors
     A_tensor = torch.tensor(A, dtype=torch.float32)
